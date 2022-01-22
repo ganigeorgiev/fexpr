@@ -1,9 +1,10 @@
 package fexpr_test
 
 import (
-	"fexpr"
 	"fmt"
 	"strings"
+
+	"github.com/ganigeorgiev/fexpr"
 )
 
 func ExampleNewScanner() {

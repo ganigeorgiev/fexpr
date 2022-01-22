@@ -1,3 +1,3 @@
-module fexpr
+module github.com/ganigeorgiev/fexpr
 
-go 1.18
+go 1.16
