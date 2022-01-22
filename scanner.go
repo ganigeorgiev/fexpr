@@ -22,7 +22,7 @@ const (
 	JoinOr  JoinOp = "||"
 )
 
-// JoinOp represents an expression sign operator.
+// SignOp represents an expression sign operator.
 type SignOp string
 
 // supported expression sign operators
@@ -319,7 +319,7 @@ func (s *Scanner) scanJoin() (Token, error) {
 func (s *Scanner) scanGroup() (Token, error) {
 	var buf bytes.Buffer
 
-	// read the first group bracket without writting it to the buffer
+	// read the first group bracket without writing it to the buffer
 	firstChar := s.read()
 	openGroups := 1
 
