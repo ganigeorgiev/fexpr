@@ -18,6 +18,8 @@ func TestParse(t *testing.T) {
 		{`a ! 1`, true, "[]"},
 		{`a - 1`, true, "[]"},
 		{`a + 1`, true, "[]"},
+		{`1 - 1`, true, "[]"},
+		{`1 + 1`, true, "[]"},
 		{`> a 1`, true, "[]"},
 		{`a || 1`, true, "[]"},
 		{`a && 1`, true, "[]"},

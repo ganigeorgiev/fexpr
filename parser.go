@@ -72,7 +72,7 @@ func Parse(text string) ([]ExprGroup, error) {
 		switch step {
 		case stepBeforeSign:
 			if t.Type != TokenIdentifier && t.Type != TokenText && t.Type != TokenNumber {
-				return nil, fmt.Errorf("Expected left operand (identifier, text or number), got %q (%s)", t.Literal, t.Type)
+				return nil, fmt.Errorf("expected left operand (identifier, text or number), got %q (%s)", t.Literal, t.Type)
 			}
 
 			expr = Expr{Left: t}
@@ -80,14 +80,14 @@ func Parse(text string) ([]ExprGroup, error) {
 			step = stepSign
 		case stepSign:
 			if t.Type != TokenSign {
-				return nil, fmt.Errorf("Expected a sign operator, got %q (%s)", t.Literal, t.Type)
+				return nil, fmt.Errorf("expected a sign operator, got %q (%s)", t.Literal, t.Type)
 			}
 
 			expr.Op = SignOp(t.Literal)
 			step = stepAfterSign
 		case stepAfterSign:
 			if t.Type != TokenIdentifier && t.Type != TokenText && t.Type != TokenNumber {
-				return nil, fmt.Errorf("Expected right operand (identifier, text or number), got %q (%s)", t.Literal, t.Type)
+				return nil, fmt.Errorf("expected right operand (identifier, text or number), got %q (%s)", t.Literal, t.Type)
 			}
 
 			expr.Right = t
@@ -96,7 +96,7 @@ func Parse(text string) ([]ExprGroup, error) {
 			step = StepJoin
 		case StepJoin:
 			if t.Type != TokenJoin {
-				return nil, fmt.Errorf("Expected && or ||, got %q (%s)", t.Literal, t.Type)
+				return nil, fmt.Errorf("expected && or ||, got %q (%s)", t.Literal, t.Type)
 			}
 
 			join = JoinAnd
@@ -109,7 +109,7 @@ func Parse(text string) ([]ExprGroup, error) {
 	}
 
 	if step != StepJoin {
-		return nil, errors.New("Invalid formatted filter expression.")
+		return nil, errors.New("invalid formatted filter expression")
 	}
 
 	return result, nil

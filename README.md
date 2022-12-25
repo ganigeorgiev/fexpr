@@ -3,7 +3,7 @@ fexpr
 [![GoDoc](https://godoc.org/github.com/ganigeorgiev/fexpr?status.svg)](https://pkg.go.dev/github.com/ganigeorgiev/fexpr)
 ================================================================================
 
-**fexpr** is a filter query language parser that generates extremely easy to work with AST structure so that you can create safely SQL, Elasticsearch, etc. queries from user input.
+**fexpr** is a filter query language parser that generates easy to work with AST structure so that you can create safely SQL, Elasticsearch, etc. queries from user input.
 
 Or in other words, transform the string `"id > 1"` into the struct `[{&& {{identifier id} > {number 1}}}]`.
 
@@ -48,13 +48,21 @@ func main() {
 - **`<=`** Less than or equal operator (eg. `a<=b`)
 - **`~`**  Like/Contains operator (eg. `a~b`)
 - **`!~`** NOT Like/Contains operator (eg. `a!~b`)
+- **`?=`**  Array/Any equal operator (eg. `a?=b`)
+- **`?!=`** Array/Any NOT Equal operator (eg. `a?!=b`)
+- **`?>`**  Array/Any Greater than operator (eg. `a?>b`)
+- **`?>=`** Array/Any Greater than or equal operator (eg. `a?>=b`)
+- **`?<`**  Array/Any Less than or equal operator (eg. `a?<b`)
+- **`?<=`** Array/Any Less than or equal operator (eg. `a?<=b`)
+- **`?~`**  Array/Any Like/Contains operator (eg. `a?~b`)
+- **`?!~`** Array/Any NOT Like/Contains operator (eg. `a?!~b`)
 - **`&&`** AND join operator (eg. `a=b && c=d`)
 - **`||`** OR join operator (eg. `a=b || c=d`)
 - **`()`** Parenthesis (eg. `(a=1 && b=2) || (a=3 && b=4)`)
 
 
 #### Numbers
-Number tokens are any integer or decimal numbers. **Example**: `123`, `10.50`.
+Number tokens are any integer or decimal numbers. **Example**: `123`, `10.50`, `-14`.
 
 
 #### Identifiers

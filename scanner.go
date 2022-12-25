@@ -35,6 +35,16 @@ const (
 	SignLte   SignOp = "<="
 	SignGt    SignOp = ">"
 	SignGte   SignOp = ">="
+
+	// array/any operators
+	SignAnyEq    SignOp = "?="
+	SignAnyNeq   SignOp = "?!="
+	SignAnyLike  SignOp = "?~"
+	SignAnyNlike SignOp = "?!~"
+	SignAnyLt    SignOp = "?<"
+	SignAnyLte   SignOp = "?<="
+	SignAnyGt    SignOp = "?>"
+	SignAnyGte   SignOp = "?>="
 )
 
 // TokenType represents a Token type.
@@ -112,7 +122,7 @@ func (s *Scanner) Scan() (Token, error) {
 		return Token{Type: TokenEOF, Literal: ""}, nil
 	}
 
-	return Token{Type: TokenUnexpected, Literal: string(ch)}, fmt.Errorf("Unexpected character %q", ch)
+	return Token{Type: TokenUnexpected, Literal: string(ch)}, fmt.Errorf("unexpected character %q", ch)
 }
 
 // scanWhitespace consumes all contiguous whitespace runes.
@@ -176,6 +186,9 @@ func (s *Scanner) scanIdentifier() (Token, error) {
 func (s *Scanner) scanNumber() (Token, error) {
 	var buf bytes.Buffer
 
+	// read the number first rune to skip the sign (if exist)
+	buf.WriteRune(s.read())
+
 	// Read every subsequent digit rune into the buffer.
 	// Non-digit runes and EOF will cause the loop to exit.
 	for {
@@ -198,7 +211,7 @@ func (s *Scanner) scanNumber() (Token, error) {
 
 	var err error
 	if !isNumber(literal) {
-		err = fmt.Errorf("Invalid number %q", literal)
+		err = fmt.Errorf("invalid number %q", literal)
 	}
 
 	return Token{Type: TokenNumber, Literal: literal}, err
@@ -239,7 +252,7 @@ func (s *Scanner) scanText() (Token, error) {
 
 	var err error
 	if !hasMatchingQuotes {
-		err = fmt.Errorf("Invalid quoted text %q", literal)
+		err = fmt.Errorf("invalid quoted text %q", literal)
 	} else {
 		// unquote
 		literal = literal[1 : len(literal)-1]
@@ -277,7 +290,7 @@ func (s *Scanner) scanSign() (Token, error) {
 
 	var err error
 	if !isSignOperator(literal) {
-		err = fmt.Errorf("Invalid sign operator %q", literal)
+		err = fmt.Errorf("invalid sign operator %q", literal)
 	}
 
 	return Token{Type: TokenSign, Literal: literal}, err
@@ -309,7 +322,7 @@ func (s *Scanner) scanJoin() (Token, error) {
 
 	var err error
 	if !isJoinOperator(literal) {
-		err = fmt.Errorf("Invalid join operator %q", literal)
+		err = fmt.Errorf("invalid join operator %q", literal)
 	}
 
 	return Token{Type: TokenJoin, Literal: literal}, err
@@ -365,7 +378,7 @@ func (s *Scanner) scanGroup() (Token, error) {
 
 	var err error
 	if !isGroupStartRune(firstChar) || openGroups > 0 {
-		err = fmt.Errorf("Invalid formatted group - missing %d closing bracket(s).", openGroups)
+		err = fmt.Errorf("invalid formatted group - missing %d closing bracket(s)", openGroups)
 	}
 
 	return Token{Type: TokenGroup, Literal: literal}, err
@@ -415,12 +428,13 @@ func isTextStartRune(ch rune) bool {
 
 // isNumberStartRune checks if a rune is a valid number start character (aka. digit).
 func isNumberStartRune(ch rune) bool {
-	return isDigitRune(ch)
+	return ch == '-' || isDigitRune(ch)
 }
 
 // isSignStartRune checks if a rune is a valid sign operator start character.
 func isSignStartRune(ch rune) bool {
 	return ch == '=' ||
+		ch == '?' ||
 		ch == '!' ||
 		ch == '>' ||
 		ch == '<' ||
@@ -439,16 +453,28 @@ func isGroupStartRune(ch rune) bool {
 
 // isSignOperator checks if a literal is a valid sign operator.
 func isSignOperator(literal string) bool {
-	op := SignOp(literal)
+	switch SignOp(literal) {
+	case
+		SignEq,
+		SignNeq,
+		SignLt,
+		SignLte,
+		SignGt,
+		SignGte,
+		SignLike,
+		SignNlike,
+		SignAnyEq,
+		SignAnyNeq,
+		SignAnyLike,
+		SignAnyNlike,
+		SignAnyLt,
+		SignAnyLte,
+		SignAnyGt,
+		SignAnyGte:
+		return true
+	}
 
-	return op == SignEq ||
-		op == SignNeq ||
-		op == SignLt ||
-		op == SignLte ||
-		op == SignGt ||
-		op == SignGte ||
-		op == SignLike ||
-		op == SignNlike
+	return false
 }
 
 // isJoinOperator checks if a literal is a valid join type operator.

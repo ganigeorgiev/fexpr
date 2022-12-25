@@ -39,8 +39,12 @@ func TestScannerScan(t *testing.T) {
 		{`test"d`, []output{{false, `{identifier test}`}, {true, `{text "d}`}}},
 		// number
 		{`123`, []output{{false, `{number 123}`}}},
-		{`123.123`, []output{{false, `{number 123.123}`}}},
+		{`-123`, []output{{false, `{number -123}`}}},
+		{`-123.456`, []output{{false, `{number -123.456}`}}},
+		{`123.456`, []output{{false, `{number 123.456}`}}},
 		{`.123`, []output{{true, `{unexpected .}`}, {false, `{number 123}`}}},
+		{`- 123`, []output{{true, `{number -}`}, {false, `{whitespace  }`}, {false, `{number 123}`}}},
+		{`12-3`, []output{{false, `{number 12}`}, {false, `{number -3}`}}},
 		{`123.abc`, []output{{true, `{number 123.}`}, {false, `{identifier abc}`}}},
 		// text
 		{`""`, []output{{false, `{text }`}}},
@@ -58,7 +62,7 @@ func TestScannerScan(t *testing.T) {
 		{`'||test&&'&&123`, []output{{false, `{text ||test&&}`}, {false, `{join &&}`}, {false, `{number 123}`}}},
 		// expression signs
 		{`=!=`, []output{{true, `{sign =!=}`}}},
-		{`= != ~ !~ > >= < <=`, []output{
+		{`= != ~ !~ > >= < <= ?= ?!= ?~ ?!~ ?> ?>= ?< ?<=`, []output{
 			{false, `{sign =}`},
 			{false, `{whitespace  }`},
 			{false, `{sign !=}`},
@@ -74,6 +78,22 @@ func TestScannerScan(t *testing.T) {
 			{false, `{sign <}`},
 			{false, `{whitespace  }`},
 			{false, `{sign <=}`},
+			{false, `{whitespace  }`},
+			{false, `{sign ?=}`},
+			{false, `{whitespace  }`},
+			{false, `{sign ?!=}`},
+			{false, `{whitespace  }`},
+			{false, `{sign ?~}`},
+			{false, `{whitespace  }`},
+			{false, `{sign ?!~}`},
+			{false, `{whitespace  }`},
+			{false, `{sign ?>}`},
+			{false, `{whitespace  }`},
+			{false, `{sign ?>=}`},
+			{false, `{whitespace  }`},
+			{false, `{sign ?<}`},
+			{false, `{whitespace  }`},
+			{false, `{sign ?<=}`},
 		}},
 		// groups/parenthesis
 		{`a)`, []output{{false, `{identifier a}`}, {true, `{unexpected )}`}}},
