@@ -163,7 +163,7 @@ func (s *Scanner) scanIdentifier() (Token, error) {
 			break
 		}
 
-		if !isIdentifierStartRune(ch) && !isDigitRune(ch) && ch != '.' {
+		if !isIdentifierStartRune(ch) && !isDigitRune(ch) && ch != '.' && ch != ':' {
 			s.unread()
 			break
 		}
@@ -497,7 +497,7 @@ func isNumber(literal string) bool {
 	return err == nil
 }
 
-var identifierRegex = regexp.MustCompile(`^[\w\.\@\#]*\w+$`)
+var identifierRegex = regexp.MustCompile(`^[\@\#\_]?[\w\.\:]*\w+$`)
 
 // isIdentifier checks if a literal is properly formatted identifier.
 func isIdentifier(literal string) bool {
