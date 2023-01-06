@@ -62,19 +62,23 @@ func main() {
 
 
 #### Numbers
-Number tokens are any integer or decimal numbers. **Example**: `123`, `10.50`, `-14`.
+Number tokens are any integer or decimal numbers.
+
+_Example_: `123`, `10.50`, `-14`.
 
 
 #### Identifiers
 
-Identifier tokens are literals that start with a letter, `_`, `@` or `#` and could contain further any number of digits or `.` (usually used as a separator).
-**Example**: `id`, `a.b.c`, `@request.method`, `field2`.
+Identifier tokens are literals that start with a letter, `_`, `@` or `#` and could contain further any number of letters, digits, `.` (usually used as a separator) or `:` (usually used as modifier) characters.
+
+_Example_: `id`, `a.b.c`, `field123`, `@request.method`, `author.name:length`.
 
 
 #### Quoted text
 
 Text tokens are any literals that are wrapped by `'` or `"` quotes.
-**Example**: `'Lorem ipsum dolor 123!'`, `"escaped \"word\""`, `"mixed 'quotes' are fine"`.
+
+_Example_: `'Lorem ipsum dolor 123!'`, `"escaped \"word\""`, `"mixed 'quotes' are fine"`.
 
 
 ## Using only the scanner
