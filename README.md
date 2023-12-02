@@ -80,7 +80,7 @@ _Example_: `'Lorem ipsum dolor 123!'`, `"escaped \"word\""`, `"mixed 'quotes' ar
 #### Comments
 
 Comment tokens are any single line text literals starting with `//`.
-Similar to whitespaces, comments are ignored by `fexpr.Parse()`
+Similar to whitespaces, comments are ignored by `fexpr.Parse()`.
 
 _Example_: `// test`.
 
