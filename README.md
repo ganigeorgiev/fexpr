@@ -31,12 +31,12 @@ func main() {
 
 > See the [package documentation](https://pkg.go.dev/github.com/ganigeorgiev/fexpr) for more details and examples.
 
+
 ## Grammar
 
 **fexpr** grammar resembles the SQL `WHERE` expression syntax. It recognizes several token types (identifiers, numbers, quoted text, expression operators, whitespaces, etc.).
 
 > You could find all supported tokens in [`scanner.go`](https://github.com/ganigeorgiev/fexpr/blob/master/scanner.go).
-
 
 #### Operators
 
@@ -60,12 +60,10 @@ func main() {
 - **`||`** OR join operator (eg. `a=b || c=d`)
 - **`()`** Parenthesis (eg. `(a=1 && b=2) || (a=3 && b=4)`)
 
-
 #### Numbers
 Number tokens are any integer or decimal numbers.
 
 _Example_: `123`, `10.50`, `-14`.
-
 
 #### Identifiers
 
@@ -73,12 +71,18 @@ Identifier tokens are literals that start with a letter, `_`, `@` or `#` and cou
 
 _Example_: `id`, `a.b.c`, `field123`, `@request.method`, `author.name:length`.
 
-
 #### Quoted text
 
 Text tokens are any literals that are wrapped by `'` or `"` quotes.
 
 _Example_: `'Lorem ipsum dolor 123!'`, `"escaped \"word\""`, `"mixed 'quotes' are fine"`.
+
+#### Comments
+
+Comment tokens are any single line text literals starting with `//`.
+Similar to whitespaces, comments are ignored by `fexpr.Parse()`
+
+_Example_: `// test`.
 
 
 ## Using only the scanner

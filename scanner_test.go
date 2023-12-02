@@ -104,6 +104,14 @@ func TestScannerScan(t *testing.T) {
 		{`((a )b c))`, []output{{false, `{group (a )b c}`}, {true, `{unexpected )}`}}},
 		{`("ab)("c)`, []output{{false, `{group "ab)("c}`}}},
 		{`("ab)(c)`, []output{{true, `{group "ab)(c)}`}}},
+		// comments
+		{`/ test`, []output{{true, `{comment }`}, {false, `{identifier test}`}}},
+		{`/ / test`, []output{{true, `{comment }`}, {true, `{comment }`}, {false, `{identifier test}`}}},
+		{`//`, []output{{false, `{comment }`}}},
+		{`//test`, []output{{false, `{comment test}`}}},
+		{`// test`, []output{{false, `{comment test}`}}},
+		{`//   test1 //test2  `, []output{{false, `{comment test1 //test2}`}}},
+		{`///test`, []output{{false, `{comment /test}`}}},
 	}
 
 	for i, scenario := range testScenarios {

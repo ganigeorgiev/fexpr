@@ -6,12 +6,19 @@ import (
 	"strings"
 )
 
+var ErrEmpty = errors.New("empty filter expression")
+var ErrIncomplete = errors.New("invalid or incomplete filter expression")
+
 // Expr represents an individual tokenized expression consisting
 // of left operand, operator and a right operand.
 type Expr struct {
 	Left  Token
 	Op    SignOp
 	Right Token
+}
+
+func (e Expr) IsZero() bool {
+	return e.Op == "" && e.Left.Literal == "" && e.Left.Type == "" && e.Right.Literal == "" && e.Right.Type == ""
 }
 
 // ExprGroup represents a wrapped expression and its join type.
@@ -32,6 +39,8 @@ const (
 
 // Parse parses the provided text and returns its processed AST
 // in the form of `ExprGroup` slice(s).
+//
+// Comments and whitespaces are ignored.
 func Parse(text string) ([]ExprGroup, error) {
 	result := []ExprGroup{}
 	scanner := NewScanner(strings.NewReader(text))
@@ -50,7 +59,7 @@ func Parse(text string) ([]ExprGroup, error) {
 			break
 		}
 
-		if t.Type == TokenWS {
+		if t.Type == TokenWS || t.Type == TokenComment {
 			continue
 		}
 
@@ -60,7 +69,7 @@ func Parse(text string) ([]ExprGroup, error) {
 				return nil, err
 			}
 
-			// append only if non-empyt group
+			// append only if non-empty group
 			if len(groupResult) > 0 {
 				result = append(result, ExprGroup{Join: join, Item: groupResult})
 			}
@@ -109,7 +118,11 @@ func Parse(text string) ([]ExprGroup, error) {
 	}
 
 	if step != StepJoin {
-		return nil, errors.New("invalid formatted filter expression")
+		if len(result) == 0 && expr.IsZero() {
+			return nil, ErrEmpty
+		}
+
+		return nil, ErrIncomplete
 	}
 
 	return result, nil

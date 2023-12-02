@@ -3,6 +3,7 @@ package fexpr
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -61,6 +62,7 @@ const (
 	TokenNumber     TokenType = "number"
 	TokenText       TokenType = "text"  // ' or " quoted string
 	TokenGroup      TokenType = "group" // groupped/nested tokens
+	TokenComment    TokenType = "comment"
 )
 
 // Token represents a single scanned literal (one or more combined runes).
@@ -116,6 +118,11 @@ func (s *Scanner) Scan() (Token, error) {
 	if isJoinStartRune(ch) {
 		s.unread()
 		return s.scanJoin()
+	}
+
+	if isCommentStartRune(ch) {
+		s.unread()
+		return s.scanComment()
 	}
 
 	if ch == eof {
@@ -384,6 +391,33 @@ func (s *Scanner) scanGroup() (Token, error) {
 	return Token{Type: TokenGroup, Literal: literal}, err
 }
 
+// scanComment consumes all contiguous single line comment runes until
+// a new character (\n) or EOF is reached.
+func (s *Scanner) scanComment() (Token, error) {
+	var buf bytes.Buffer
+
+	// Read the first 2 characters without writting them to the buffer.
+	if !isCommentStartRune(s.read()) || !isCommentStartRune(s.read()) {
+		return Token{Type: TokenComment}, errors.New("invalid comment")
+	}
+
+	// Read every subsequent comment text rune into the buffer.
+	// \n and EOF will cause the loop to exit.
+	for i := 0; ; i++ {
+		ch := s.read()
+
+		if ch == eof || ch == '\n' {
+			break
+		}
+
+		buf.WriteRune(ch)
+	}
+
+	literal := strings.TrimSpace(buf.String())
+
+	return Token{Type: TokenComment, Literal: literal}, nil
+}
+
 // read reads the next rune from the buffered reader.
 // Returns the `rune(0)` if an error or `io.EOF` occurs.
 func (s *Scanner) read() rune {
@@ -449,6 +483,11 @@ func isJoinStartRune(ch rune) bool {
 // isGroupStartRune checks if a rune is a valid group/parenthesis start character.
 func isGroupStartRune(ch rune) bool {
 	return ch == '('
+}
+
+// isCommentStartRune checks if a rune is a valid comment start character.
+func isCommentStartRune(ch rune) bool {
+	return ch == '/'
 }
 
 // isSignOperator checks if a literal is a valid sign operator.
