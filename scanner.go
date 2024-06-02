@@ -107,7 +107,7 @@ func (s *Scanner) Scan() (Token, error) {
 
 	if isTextStartRune(ch) {
 		s.unread()
-		return s.scanText()
+		return s.scanText(false)
 	}
 
 	if isSignStartRune(ch) {
@@ -225,7 +225,7 @@ func (s *Scanner) scanNumber() (Token, error) {
 }
 
 // scanText consumes all contiguous quoted text runes.
-func (s *Scanner) scanText() (Token, error) {
+func (s *Scanner) scanText(preserveQuotes bool) (Token, error) {
 	var buf bytes.Buffer
 
 	// read the first rune to determine the quotes type
@@ -260,7 +260,7 @@ func (s *Scanner) scanText() (Token, error) {
 	var err error
 	if !hasMatchingQuotes {
 		err = fmt.Errorf("invalid quoted text %q", literal)
-	} else {
+	} else if !preserveQuotes {
 		// unquote
 		literal = literal[1 : len(literal)-1]
 		// remove escaped quotes prefix (aka. \)
@@ -358,15 +358,14 @@ func (s *Scanner) scanGroup() (Token, error) {
 			buf.WriteRune(ch)
 		} else if isTextStartRune(ch) {
 			s.unread()
-			t, err := s.scanText()
+			t, err := s.scanText(true) // with quotes to preserve the exact text start/end runes
 			if err != nil {
 				// write the errored literal as it is
 				buf.WriteString(t.Literal)
 				return Token{Type: TokenGroup, Literal: buf.String()}, err
 			}
 
-			// quote the literal to preserve the text start/end runes
-			buf.WriteString("\"" + t.Literal + "\"")
+			buf.WriteString(t.Literal)
 		} else if ch == ')' {
 			openGroups--
 

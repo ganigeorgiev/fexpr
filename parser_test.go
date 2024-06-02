@@ -110,6 +110,11 @@ func TestParse(t *testing.T) {
 		{`a=1 && 2!=3 || "b"=a`, false, `[{&& {{identifier a} = {number 1}}} {&& {{number 2} != {number 3}}} {|| {{text b} = {identifier a}}}]`},
 		{`(a=1 && 2!=3) || "b"=a`, false, `[{&& [{&& {{identifier a} = {number 1}}} {&& {{number 2} != {number 3}}}]} {|| {{text b} = {identifier a}}}]`},
 		{`((a=1 || a=2) && (c=1))`, false, `[{&& [{&& [{&& {{identifier a} = {number 1}}} {|| {{identifier a} = {number 2}}}]} {&& [{&& {{identifier c} = {number 1}}}]}]}]`},
+		// https://github.com/pocketbase/pocketbase/issues/5017
+		{`(a='"')`, false, `[{&& [{&& {{identifier a} = {text "}}}]}]`},
+		{`(a='\'')`, false, `[{&& [{&& {{identifier a} = {text '}}}]}]`},
+		{`(a="'")`, false, `[{&& [{&& {{identifier a} = {text '}}}]}]`},
+		{`(a="\"")`, false, `[{&& [{&& {{identifier a} = {text "}}}]}]`},
 	}
 
 	for i, scenario := range scenarios {
