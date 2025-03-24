@@ -2,17 +2,12 @@ package fexpr_test
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/ganigeorgiev/fexpr"
 )
 
-func ExampleNewScanner() {
-	fexpr.NewScanner(strings.NewReader("id"))
-}
-
 func ExampleScanner_Scan() {
-	s := fexpr.NewScanner(strings.NewReader("id > 123"))
+	s := fexpr.NewScanner([]byte("id > 123"))
 
 	for {
 		t, err := s.Scan()
@@ -37,5 +32,5 @@ func ExampleParse() {
 	fmt.Println(result)
 
 	// Output:
-	// [{&& {{identifier id} > {number 123}}}]
+	// [{{{identifier id} > {number 123}} &&}]
 }

@@ -3,7 +3,6 @@ package fexpr
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
 
 var ErrEmpty = errors.New("empty filter expression")
@@ -25,8 +24,8 @@ func (e Expr) IsZero() bool {
 //
 // The group's Item could be either an `Expr` instance or `[]ExprGroup` slice (for nested expressions).
 type ExprGroup struct {
-	Join JoinOp
 	Item interface{}
+	Join JoinOp
 }
 
 // parser's state machine steps
@@ -43,7 +42,7 @@ const (
 // Comments and whitespaces are ignored.
 func Parse(text string) ([]ExprGroup, error) {
 	result := []ExprGroup{}
-	scanner := NewScanner(strings.NewReader(text))
+	scanner := NewScanner([]byte(text))
 	step := stepBeforeSign
 	join := JoinAnd
 

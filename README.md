@@ -90,7 +90,7 @@ _Example_: `// test`.
 The tokenizer (aka. `fexpr.Scanner`) could be used without the parser's state machine so that you can write your own custom tokens processing:
 
 ```go
-s := fexpr.NewScanner(strings.NewReader("id > 123"))
+s := fexpr.NewScanner([]byte("id > 123"))
 
 // scan single token at a time until EOF or error is reached
 for {
