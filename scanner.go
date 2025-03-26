@@ -443,7 +443,7 @@ func (s *Scanner) scanGroup() (Token, error) {
 func (s *Scanner) scanFunctionArgs(funcName string) (Token, error) {
 	var args []Token
 
-	var expectComma, isComma bool
+	var expectComma, isComma, isClosed bool
 
 	ch := s.read()
 	if ch != '(' {
@@ -454,19 +454,30 @@ func (s *Scanner) scanFunctionArgs(funcName string) (Token, error) {
 	for {
 		ch := s.read()
 
-		if ch == ')' {
+		if ch == eof {
 			break
 		}
 
-		if ch == eof {
-			return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid or incomplete function call %q (expected ')')", funcName)
+		if ch == ')' {
+			isClosed = true
+			break
 		}
 
 		// skip whitespaces
 		if isWhitespaceRune(ch) {
 			_, err := s.scanWhitespace()
 			if err != nil {
-				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("failed to scan whitespaces in function call %q: %w", funcName, err)
+				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("failed to scan whitespaces in function %q: %w", funcName, err)
+			}
+			continue
+		}
+
+		// skip comments
+		if isCommentStartRune(ch) {
+			s.unread()
+			_, err := s.scanComment()
+			if err != nil {
+				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("failed to scan comment in function %q: %w", funcName, err)
 			}
 			continue
 		}
@@ -474,11 +485,11 @@ func (s *Scanner) scanFunctionArgs(funcName string) (Token, error) {
 		isComma = ch == ','
 
 		if expectComma && !isComma {
-			return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("expected comma after the last argument in function call %q", funcName)
+			return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("expected comma after the last argument in function %q", funcName)
 		}
 
 		if !expectComma && isComma {
-			return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("unexpected comma in function call %q", funcName)
+			return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("unexpected comma in function %q", funcName)
 		}
 
 		expectComma = false // reset
@@ -491,7 +502,7 @@ func (s *Scanner) scanFunctionArgs(funcName string) (Token, error) {
 			s.unread()
 			t, err := s.scanIdentifier(false)
 			if err != nil {
-				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid function %q identifier argument %q: %w", funcName, t.Literal, err)
+				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid identifier argument %q in function %q: %w", t.Literal, funcName, err)
 			}
 			args = append(args, t)
 			expectComma = true
@@ -499,7 +510,7 @@ func (s *Scanner) scanFunctionArgs(funcName string) (Token, error) {
 			s.unread()
 			t, err := s.scanNumber()
 			if err != nil {
-				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid function %q number argument %q: %w", funcName, t.Literal, err)
+				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid number argument %q in function %q: %w", t.Literal, funcName, err)
 			}
 			args = append(args, t)
 			expectComma = true
@@ -507,13 +518,17 @@ func (s *Scanner) scanFunctionArgs(funcName string) (Token, error) {
 			s.unread()
 			t, err := s.scanText(false)
 			if err != nil {
-				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid function %q text argument %q: %w", funcName, t.Literal, err)
+				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid text argument %q in function %q: %w", t.Literal, funcName, err)
 			}
 			args = append(args, t)
 			expectComma = true
 		} else {
-			return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("unsupported function %q argument character %q", funcName, ch)
+			return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("unsupported argument character %q in function %q", ch, funcName)
 		}
+	}
+
+	if !isClosed {
+		return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid or incomplete function %q (expected ')')", funcName)
 	}
 
 	return Token{Type: TokenFunction, Literal: funcName, Meta: args}, nil

@@ -126,6 +126,10 @@ func TestScannerScan(t *testing.T) {
 		{`test(a,,)`, []output{{true, `{[{<nil> identifier a}] function test}`}, {true, `{<nil> unexpected )}`}}},                                                                    // unexpected trailing commas
 		{`test(a,,,b)`, []output{{true, `{[{<nil> identifier a}] function test}`}, {true, `{<nil> unexpected ,}`}, {false, `{<nil> identifier b}`}, {true, `{<nil> unexpected )}`}}}, // unexpected mid-args commas
 		{`test(   @test.a.b:test  , 123, "ab)c", 'd,ce', false)`, []output{{false, `{[{<nil> identifier @test.a.b:test} {<nil> number 123} {<nil> text ab)c} {<nil> text d,ce} {<nil> identifier false}] function test}`}}},
+		{"test(a //test)", []output{{true, `{[{<nil> identifier a}] function test}`}}},    // invalid simple comment
+		{"test(a //test\n)", []output{{false, `{[{<nil> identifier a}] function test}`}}}, // valid simple comment
+		{"test(a, //test\n, b)", []output{{true, `{[{<nil> identifier a}] function test}`}, {false, `{<nil> whitespace  }`}, {false, `{<nil> identifier b}`}, {true, `{<nil> unexpected )}`}}},
+		{"test(a, //test\n b)", []output{{false, `{[{<nil> identifier a} {<nil> identifier b}] function test}`}}},
 	}
 
 	for _, scenario := range testScenarios {
