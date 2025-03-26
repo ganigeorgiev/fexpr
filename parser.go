@@ -7,6 +7,7 @@ import (
 
 var ErrEmpty = errors.New("empty filter expression")
 var ErrIncomplete = errors.New("invalid or incomplete filter expression")
+var ErrInvalidComment = errors.New("invalid comment")
 
 // Expr represents an individual tokenized expression consisting
 // of left operand, operator and a right operand.
@@ -16,6 +17,7 @@ type Expr struct {
 	Right Token
 }
 
+// IsZero checks if the current Expr has zero-valued props.
 func (e Expr) IsZero() bool {
 	return e.Op == "" && e.Left.Literal == "" && e.Left.Type == "" && e.Right.Literal == "" && e.Right.Type == ""
 }
@@ -79,8 +81,8 @@ func Parse(text string) ([]ExprGroup, error) {
 
 		switch step {
 		case stepBeforeSign:
-			if t.Type != TokenIdentifier && t.Type != TokenText && t.Type != TokenNumber {
-				return nil, fmt.Errorf("expected left operand (identifier, text or number), got %q (%s)", t.Literal, t.Type)
+			if t.Type != TokenIdentifier && t.Type != TokenText && t.Type != TokenNumber && t.Type != TokenFunction {
+				return nil, fmt.Errorf("expected left operand (identifier, function, text or number), got %q (%s)", t.Literal, t.Type)
 			}
 
 			expr = Expr{Left: t}
@@ -94,8 +96,8 @@ func Parse(text string) ([]ExprGroup, error) {
 			expr.Op = SignOp(t.Literal)
 			step = stepAfterSign
 		case stepAfterSign:
-			if t.Type != TokenIdentifier && t.Type != TokenText && t.Type != TokenNumber {
-				return nil, fmt.Errorf("expected right operand (identifier, text or number), got %q (%s)", t.Literal, t.Type)
+			if t.Type != TokenIdentifier && t.Type != TokenText && t.Type != TokenNumber && t.Type != TokenFunction {
+				return nil, fmt.Errorf("expected right operand (identifier, function text or number), got %q (%s)", t.Literal, t.Type)
 			}
 
 			expr.Right = t

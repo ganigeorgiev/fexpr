@@ -19,11 +19,11 @@ func ExampleScanner_Scan() {
 	}
 
 	// Output:
-	// {identifier id}
-	// {whitespace  }
-	// {sign >}
-	// {whitespace  }
-	// {number 123}
+	// {<nil> identifier id}
+	// {<nil> whitespace  }
+	// {<nil> sign >}
+	// {<nil> whitespace  }
+	// {<nil> number 123}
 }
 
 func ExampleParse() {
@@ -32,5 +32,5 @@ func ExampleParse() {
 	fmt.Println(result)
 
 	// Output:
-	// [{{{identifier id} > {number 123}} &&}]
+	// [{{{<nil> identifier id} > {<nil> number 123}} &&}]
 }
