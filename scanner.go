@@ -71,13 +71,17 @@ type Token struct {
 
 // NewScanner creates and returns a new scanner instance loaded with the specified data.
 func NewScanner(data []byte) *Scanner {
-	return &Scanner{data: data}
+	return &Scanner{
+		data:         data,
+		maxFuncDepth: 3,
+	}
 }
 
 // Scanner represents a filter and lexical scanner.
 type Scanner struct {
-	data []byte
-	i    int
+	data         []byte
+	pos          int
+	maxFuncDepth int
 }
 
 // Scan reads and returns the next available token value from the scanner's buffer.
@@ -100,7 +104,7 @@ func (s *Scanner) Scan() (Token, error) {
 
 	if isIdentifierStartRune(ch) {
 		s.unread()
-		return s.scanIdentifier(true)
+		return s.scanIdentifier(s.maxFuncDepth)
 	}
 
 	if isNumberStartRune(ch) {
@@ -275,7 +279,7 @@ func (s *Scanner) scanComment() (Token, error) {
 }
 
 // scanIdentifier consumes all contiguous ident runes.
-func (s *Scanner) scanIdentifier(allowFuncScan bool) (Token, error) {
+func (s *Scanner) scanIdentifier(funcDepth int) (Token, error) {
 	var buf bytes.Buffer
 
 	// read the first rune in case it is a special start identifier character
@@ -290,21 +294,26 @@ func (s *Scanner) scanIdentifier(allowFuncScan bool) (Token, error) {
 			break
 		}
 
-		if allowFuncScan && ch == '(' {
+		// func
+		if ch == '(' {
 			funcName := buf.String()
+			if funcDepth <= 0 {
+				return Token{Type: TokenFunction, Literal: funcName}, fmt.Errorf("max nested function arguments reached (max: %d)", s.maxFuncDepth)
+			}
 			if !isValidIdentifier(funcName) {
 				return Token{Type: TokenFunction, Literal: funcName}, fmt.Errorf("invalid function name %q", funcName)
 			}
 			s.unread()
-			return s.scanFunctionArgs(funcName)
+			return s.scanFunctionArgs(funcName, funcDepth)
 		}
 
+		// not an identifier character
 		if !isLetterRune(ch) && !isDigitRune(ch) && !isIdentifierCombineRune(ch) && ch != '_' {
 			s.unread()
 			break
 		}
 
-		// write the ident rune
+		// write the identifier rune
 		buf.WriteRune(ch)
 	}
 
@@ -440,7 +449,7 @@ func (s *Scanner) scanGroup() (Token, error) {
 // scanFunctionArgs consumes all contiguous function call runes to
 // extract its arguments and returns a function token with the found
 // Token arguments loaded in Token.Meta.
-func (s *Scanner) scanFunctionArgs(funcName string) (Token, error) {
+func (s *Scanner) scanFunctionArgs(funcName string, funcDepth int) (Token, error) {
 	var args []Token
 
 	var expectComma, isComma, isClosed bool
@@ -500,7 +509,7 @@ func (s *Scanner) scanFunctionArgs(funcName string) (Token, error) {
 
 		if isIdentifierStartRune(ch) {
 			s.unread()
-			t, err := s.scanIdentifier(false)
+			t, err := s.scanIdentifier(funcDepth - 1)
 			if err != nil {
 				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid identifier argument %q in function %q: %w", t.Literal, funcName, err)
 			}
@@ -536,19 +545,19 @@ func (s *Scanner) scanFunctionArgs(funcName string) (Token, error) {
 
 // unread unreads the last character and revert the position 1 step back.
 func (s *Scanner) unread() {
-	if s.i > 0 {
-		s.i = s.i - 1
+	if s.pos > 0 {
+		s.pos = s.pos - 1
 	}
 }
 
 // read reads the next rune and moves the position forward.
 func (s *Scanner) read() rune {
-	if s.i >= len(s.data) {
+	if s.pos >= len(s.data) {
 		return eof
 	}
 
-	ch, n := utf8.DecodeRune(s.data[s.i:])
-	s.i += n
+	ch, n := utf8.DecodeRune(s.data[s.pos:])
+	s.pos += n
 
 	return ch
 }

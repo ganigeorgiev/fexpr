@@ -100,14 +100,6 @@ func TestScannerScan(t *testing.T) {
 			{false, `{<nil> whitespace  }`},
 			{false, `{<nil> sign ?<=}`},
 		}},
-		// groups/parenthesis
-		{`a)`, []output{{false, `{<nil> identifier a}`}, {true, `{<nil> unexpected )}`}}},
-		{`(a b c`, []output{{true, `{<nil> group a b c}`}}},
-		{`(a b c)`, []output{{false, `{<nil> group a b c}`}}},
-		{`((a b c))`, []output{{false, `{<nil> group (a b c)}`}}},
-		{`((a )b c))`, []output{{false, `{<nil> group (a )b c}`}, {true, `{<nil> unexpected )}`}}},
-		{`("ab)("c)`, []output{{false, `{<nil> group "ab)("c}`}}},
-		{`("ab)(c)`, []output{{true, `{<nil> group "ab)(c)}`}}},
 		// comments
 		{`/ test`, []output{{true, `{<nil> comment }`}, {false, `{<nil> identifier test}`}}},
 		{`/ / test`, []output{{true, `{<nil> comment }`}, {true, `{<nil> comment }`}, {false, `{<nil> identifier test}`}}},
@@ -116,7 +108,7 @@ func TestScannerScan(t *testing.T) {
 		{`// test`, []output{{false, `{<nil> comment test}`}}},
 		{`//   test1 //test2  `, []output{{false, `{<nil> comment test1 //test2}`}}},
 		{`///test`, []output{{false, `{<nil> comment /test}`}}},
-		// functions
+		// funcs
 		{`test()`, []output{{false, `{[] function test}`}}},
 		{`test(a, b`, []output{{true, `{[{<nil> identifier a} {<nil> identifier b}] function test}`}}},
 		{`@test:abc()`, []output{{false, `{[] function @test:abc}`}}},
@@ -130,6 +122,19 @@ func TestScannerScan(t *testing.T) {
 		{"test(a //test\n)", []output{{false, `{[{<nil> identifier a}] function test}`}}}, // valid simple comment
 		{"test(a, //test\n, b)", []output{{true, `{[{<nil> identifier a}] function test}`}, {false, `{<nil> whitespace  }`}, {false, `{<nil> identifier b}`}, {true, `{<nil> unexpected )}`}}},
 		{"test(a, //test\n b)", []output{{false, `{[{<nil> identifier a} {<nil> identifier b}] function test}`}}},
+		{"test(a, test(test(b), c), d)", []output{{false, `{[{<nil> identifier a} {[{[{<nil> identifier b}] function test} {<nil> identifier c}] function test} {<nil> identifier d}] function test}`}}},
+		// max funcs depth
+		{"a(b(c(1)))", []output{{false, `{[{[{[{<nil> number 1}] function c}] function b}] function a}`}}},
+		{"a(b(c(d(1))))", []output{{true, `{[] function a}`}, {false, `{<nil> number 1}`}, {true, `{<nil> unexpected )}`}, {true, `{<nil> unexpected )}`}, {true, `{<nil> unexpected )}`}, {true, `{<nil> unexpected )}`}}},
+		// groups/parenthesis
+		{`a)`, []output{{false, `{<nil> identifier a}`}, {true, `{<nil> unexpected )}`}}},
+		{`(a b c`, []output{{true, `{<nil> group a b c}`}}},
+		{`(a b c)`, []output{{false, `{<nil> group a b c}`}}},
+		{`((a b c))`, []output{{false, `{<nil> group (a b c)}`}}},
+		{`((a )b c))`, []output{{false, `{<nil> group (a )b c}`}, {true, `{<nil> unexpected )}`}}},
+		{`("ab)("c)`, []output{{false, `{<nil> group "ab)("c}`}}},
+		{`("ab)(c)`, []output{{true, `{<nil> group "ab)(c)}`}}},
+		{`( func(1, 2, 3, func(4)) a b c )`, []output{{false, `{<nil> group  func(1, 2, 3, func(4)) a b c }`}}},
 	}
 
 	for _, scenario := range testScenarios {

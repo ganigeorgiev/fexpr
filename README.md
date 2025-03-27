@@ -22,8 +22,8 @@ package main
 import github.com/ganigeorgiev/fexpr
 
 func main() {
+    // [{&& {{identifier id} = {number 123}}} {&& {{identifier status} = {text active}}}]
     result, err := fexpr.Parse("id=123 && status='active'")
-    // minimized output: [{&& {{identifier id} = {number 123}}} {&& {{identifier status} = {text active}}}]
 }
 ```
 
@@ -80,9 +80,9 @@ _Example_: `id`, `a.b.c`, `field123`, `@request.method`, `author.name:length`.
 #### Functions
 
 Function tokens are similar to the identifiers but in addition accept a list of arguments enclosed in parenthesis `()`.
-The function arguments can be identifiers, quoted texts or numbers and must be separated by comma (_a single trailing comma is allowed_).
+The function arguments must be separated by comma (_a single trailing comma is also allowed_) and each argument can be an identifier, quoted text, number or another nested function (_up to 2 nested_).
 
-_Example_: `test()`, `test(a.b, 123, "abc")`, `@a.b.c:test(true)`.
+_Example_: `test()`, `test(a.b, 123, "abc")`, `@a.b.c:test(true)`, `a(b(c(1, 2)))`.
 
 #### Comments
 
