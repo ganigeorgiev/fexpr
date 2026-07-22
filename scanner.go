@@ -73,6 +73,7 @@ type Token struct {
 func NewScanner(data []byte) *Scanner {
 	return &Scanner{
 		data:         data,
+		lastRuneSize: -1,
 		maxFuncDepth: 3,
 	}
 }
@@ -82,6 +83,7 @@ type Scanner struct {
 	data         []byte
 	pos          int
 	maxFuncDepth int
+	lastRuneSize int // -1 means invalid
 }
 
 // Scan reads and returns the next available token value from the scanner's buffer.
@@ -93,42 +95,42 @@ func (s *Scanner) Scan() (Token, error) {
 	}
 
 	if isWhitespaceRune(ch) {
-		s.unread()
+		s.unreadOnce()
 		return s.scanWhitespace()
 	}
 
 	if isGroupStartRune(ch) {
-		s.unread()
+		s.unreadOnce()
 		return s.scanGroup()
 	}
 
 	if isIdentifierStartRune(ch) {
-		s.unread()
+		s.unreadOnce()
 		return s.scanIdentifier(s.maxFuncDepth)
 	}
 
 	if isNumberStartRune(ch) {
-		s.unread()
+		s.unreadOnce()
 		return s.scanNumber()
 	}
 
 	if isTextStartRune(ch) {
-		s.unread()
+		s.unreadOnce()
 		return s.scanText(false)
 	}
 
 	if isSignStartRune(ch) {
-		s.unread()
+		s.unreadOnce()
 		return s.scanSign()
 	}
 
 	if isJoinStartRune(ch) {
-		s.unread()
+		s.unreadOnce()
 		return s.scanJoin()
 	}
 
 	if isCommentStartRune(ch) {
-		s.unread()
+		s.unreadOnce()
 		return s.scanComment()
 	}
 
@@ -149,7 +151,7 @@ func (s *Scanner) scanWhitespace() (Token, error) {
 		}
 
 		if !isWhitespaceRune(ch) {
-			s.unread()
+			s.unreadOnce()
 			break
 		}
 
@@ -182,7 +184,7 @@ func (s *Scanner) scanNumber() (Token, error) {
 			(ch != '-' || buf.Len() != 0) &&
 			// dot but there was already another dot
 			(ch != '.' || hadDot) {
-			s.unread()
+			s.unreadOnce()
 			break
 		}
 
@@ -212,8 +214,12 @@ func (s *Scanner) scanText(preserveQuotes bool) (Token, error) {
 
 	// read the first rune to determine the quotes type
 	firstCh := s.read()
-	buf.WriteRune(firstCh)
-	var prevCh rune
+
+	if preserveQuotes {
+		buf.WriteRune(firstCh)
+	}
+
+	var escapeNext bool
 	var hasMatchingQuotes bool
 
 	// Read every subsequent text rune into the buffer.
@@ -225,29 +231,59 @@ func (s *Scanner) scanText(preserveQuotes bool) (Token, error) {
 			break
 		}
 
-		// write the text rune
-		buf.WriteRune(ch)
+		if escapeNext {
+			// reset escape state
+			escapeNext = false
 
-		// unescaped matching quote, aka. the end
-		if ch == firstCh && prevCh != '\\' {
+			if !preserveQuotes {
+				switch ch {
+				case 'n':
+					buf.WriteRune('\n')
+				case 't':
+					buf.WriteRune('\t')
+				case 'r':
+					buf.WriteRune('\r')
+				case '\\', '\'', '"':
+					buf.WriteRune(ch)
+				default:
+					// escape regular literal
+					// (note: the backslash is added because we've skipped it in
+					// the escape start check to avoid back-and-forth mutation of the slice)
+					buf.WriteRune('\\')
+					buf.WriteRune(ch)
+				}
+			} else {
+				buf.WriteRune(ch)
+			}
+		} else if ch == '\\' {
+			// escape next char
+			escapeNext = true
+			if preserveQuotes {
+				buf.WriteRune(ch)
+			}
+		} else if ch == firstCh {
+			// unescaped matching quote, aka. the end
 			hasMatchingQuotes = true
-			break
-		}
+			if preserveQuotes {
+				buf.WriteRune(ch)
+			}
 
-		prevCh = ch
+			break
+		} else {
+			buf.WriteRune(ch)
+		}
 	}
 
 	literal := buf.String()
 
 	var err error
 	if !hasMatchingQuotes {
+		// concatenated the initially skipped quote to allow easier debugging
+		if !preserveQuotes {
+			literal = string(firstCh) + literal
+		}
+
 		err = fmt.Errorf("invalid quoted text %q", literal)
-	} else if !preserveQuotes {
-		// unquote
-		literal = literal[1 : len(literal)-1]
-		// remove escaped quotes prefix (aka. \)
-		firstChStr := string(firstCh)
-		literal = strings.ReplaceAll(literal, `\`+firstChStr, firstChStr)
 	}
 
 	return Token{Type: TokenText, Literal: literal}, err
@@ -303,13 +339,13 @@ func (s *Scanner) scanIdentifier(funcDepth int) (Token, error) {
 			if !isValidIdentifier(funcName) {
 				return Token{Type: TokenFunction, Literal: funcName}, fmt.Errorf("invalid function name %q", funcName)
 			}
-			s.unread()
+			s.unreadOnce()
 			return s.scanFunctionArgs(funcName, funcDepth)
 		}
 
 		// not an identifier character
 		if !isLetterRune(ch) && !isDigitRune(ch) && !isIdentifierCombineRune(ch) && ch != '_' {
-			s.unread()
+			s.unreadOnce()
 			break
 		}
 
@@ -341,7 +377,7 @@ func (s *Scanner) scanSign() (Token, error) {
 		}
 
 		if !isSignStartRune(ch) {
-			s.unread()
+			s.unreadOnce()
 			break
 		}
 
@@ -373,7 +409,7 @@ func (s *Scanner) scanJoin() (Token, error) {
 		}
 
 		if !isJoinStartRune(ch) {
-			s.unread()
+			s.unreadOnce()
 			break
 		}
 
@@ -400,7 +436,7 @@ func (s *Scanner) scanGroup() (Token, error) {
 	openGroups := 1
 
 	// Read every subsequent text rune into the buffer.
-	// EOF and matching unescaped ending quote will cause the loop to exit.
+	// EOF and parenthesis end will cause the loop to exit.
 	for {
 		ch := s.read()
 
@@ -413,7 +449,7 @@ func (s *Scanner) scanGroup() (Token, error) {
 			openGroups++
 			buf.WriteRune(ch)
 		} else if isTextStartRune(ch) {
-			s.unread()
+			s.unreadOnce()
 			t, err := s.scanText(true) // with quotes to preserve the exact text start/end runes
 			if err != nil {
 				// write the errored literal as it is
@@ -483,7 +519,7 @@ func (s *Scanner) scanFunctionArgs(funcName string, funcDepth int) (Token, error
 
 		// skip comments
 		if isCommentStartRune(ch) {
-			s.unread()
+			s.unreadOnce()
 			_, err := s.scanComment()
 			if err != nil {
 				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("failed to scan comment in function %q: %w", funcName, err)
@@ -508,7 +544,7 @@ func (s *Scanner) scanFunctionArgs(funcName string, funcDepth int) (Token, error
 		}
 
 		if isIdentifierStartRune(ch) {
-			s.unread()
+			s.unreadOnce()
 			t, err := s.scanIdentifier(funcDepth - 1)
 			if err != nil {
 				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid identifier argument %q in function %q: %w", t.Literal, funcName, err)
@@ -516,7 +552,7 @@ func (s *Scanner) scanFunctionArgs(funcName string, funcDepth int) (Token, error
 			args = append(args, t)
 			expectComma = true
 		} else if isNumberStartRune(ch) {
-			s.unread()
+			s.unreadOnce()
 			t, err := s.scanNumber()
 			if err != nil {
 				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid number argument %q in function %q: %w", t.Literal, funcName, err)
@@ -524,7 +560,7 @@ func (s *Scanner) scanFunctionArgs(funcName string, funcDepth int) (Token, error
 			args = append(args, t)
 			expectComma = true
 		} else if isTextStartRune(ch) {
-			s.unread()
+			s.unreadOnce()
 			t, err := s.scanText(false)
 			if err != nil {
 				return Token{Type: TokenFunction, Literal: funcName, Meta: args}, fmt.Errorf("invalid text argument %q in function %q: %w", t.Literal, funcName, err)
@@ -543,20 +579,27 @@ func (s *Scanner) scanFunctionArgs(funcName string, funcDepth int) (Token, error
 	return Token{Type: TokenFunction, Literal: funcName, Meta: args}, nil
 }
 
-// unread unreads the last character and revert the position 1 step back.
-func (s *Scanner) unread() {
-	if s.pos > 0 {
-		s.pos = s.pos - 1
+// unread unreads the last character and revert the position exactly 1 step back.
+//
+// This method is no-op if called more than once without read.
+func (s *Scanner) unreadOnce() {
+	if s.lastRuneSize < 0 || s.pos < s.lastRuneSize {
+		return
 	}
+
+	s.pos -= s.lastRuneSize
+	s.lastRuneSize = -1
 }
 
 // read reads the next rune and moves the position forward.
 func (s *Scanner) read() rune {
 	if s.pos >= len(s.data) {
+		s.lastRuneSize = -1
 		return eof
 	}
 
 	ch, n := utf8.DecodeRune(s.data[s.pos:])
+	s.lastRuneSize = n
 	s.pos += n
 
 	return ch
@@ -671,9 +714,9 @@ func isJoinOperator(literal string) bool {
 func isValidIdentifier(literal string) bool {
 	length := len(literal)
 
-	return (
-	// doesn't end with combine rune
-	!isIdentifierCombineRune(rune(literal[length-1])) &&
+	return (length > 0 &&
+		// doesn't end with combine rune
+		!isIdentifierCombineRune(rune(literal[length-1])) &&
 		// is not just a special start rune
 		(length != 1 || !isIdentifierSpecialStartRune(rune(literal[0]))))
 }
