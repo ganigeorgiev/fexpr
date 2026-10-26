@@ -1,3 +1,7 @@
+**⚠️ The project has moved to https://ganigeorgiev.com/fexpr.**
+
+---
+
 fexpr
 [![Go Report Card](https://goreportcard.com/badge/github.com/ganigeorgiev/fexpr)](https://goreportcard.com/report/github.com/ganigeorgiev/fexpr)
 [![GoDoc](https://godoc.org/github.com/ganigeorgiev/fexpr?status.svg)](https://pkg.go.dev/github.com/ganigeorgiev/fexpr)
